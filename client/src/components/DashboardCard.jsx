@@ -1,4 +1,4 @@
-export default function DashboardCard({ title, value, icon, color = "indigo" }) {
+export default function DashboardCard({ title, value, icon, color = "indigo", subtitle }) {
   const colors = {
     indigo: "bg-indigo-50 text-indigo-700",
     green: "bg-green-50 text-green-700",
@@ -14,6 +14,7 @@ export default function DashboardCard({ title, value, icon, color = "indigo" }) 
       <div>
         <p className="text-sm text-gray-500">{title}</p>
         <p className="text-2xl font-bold text-gray-900">{value}</p>
+        {subtitle && <p className="text-xs text-gray-400 truncate max-w-[180px]">{subtitle}</p>}
       </div>
     </div>
   );

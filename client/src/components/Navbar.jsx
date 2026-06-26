@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 const links = [
   { to: "/", label: "Dashboard" },
   { to: "/transactions", label: "Transactions" },
+  { to: "/budgets", label: "Budgets" },
 ];
 
 export default function Navbar() {
