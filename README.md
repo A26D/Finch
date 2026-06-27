@@ -1,4 +1,4 @@
-# 💰 AI Expense Tracker
+# 💰 FINCH- AI Expense Tracker
 
 A production-grade personal finance management platform with AI-powered insights, built on a modern, scalable architecture: **React**, **Node.js/Express**, **PostgreSQL**, **Redis**, and **BullMQ**.
 
