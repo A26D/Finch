@@ -41,6 +41,7 @@ describe("Goals CRUD API", () => {
   it("GET /api/goals/:id — returns single goal with progress", async () => {
     const res = await request(app)
       .get(`/api/goals/${goalId}`)
+      .query({ user_id: USER_ID })
       .expect(200);
 
     expect(res.body.id).toBe(goalId);
@@ -51,6 +52,7 @@ describe("Goals CRUD API", () => {
   it("PUT /api/goals/:id — updates a goal", async () => {
     const res = await request(app)
       .put(`/api/goals/${goalId}`)
+      .query({ user_id: USER_ID })
       .send({ target_amount: 75000 })
       .expect(200);
 
@@ -60,6 +62,7 @@ describe("Goals CRUD API", () => {
   it("POST /api/goals/:id/contribute — contributes to a goal", async () => {
     const res = await request(app)
       .post(`/api/goals/${goalId}/contribute`)
+      .query({ user_id: USER_ID })
       .send({ amount: 10000 })
       .expect(200);
 
@@ -69,6 +72,7 @@ describe("Goals CRUD API", () => {
   it("DELETE /api/goals/:id — soft-deletes a goal", async () => {
     const res = await request(app)
       .delete(`/api/goals/${goalId}`)
+      .query({ user_id: USER_ID })
       .expect(200);
 
     expect(res.body.message).toBe("Goal archived");
@@ -77,6 +81,7 @@ describe("Goals CRUD API", () => {
   it("GET /api/goals/:id — returns 404 for archived goal", async () => {
     await request(app)
       .get(`/api/goals/${goalId}`)
+      .query({ user_id: USER_ID })
       .expect(404);
   });
 
@@ -107,6 +112,7 @@ describe("Goals CRUD API", () => {
   it("POST /api/goals/:id/contribute — rejects negative contribution", async () => {
     const res = await request(app)
       .post(`/api/goals/${goalId}/contribute`)
+      .query({ user_id: USER_ID })
       .send({ amount: -50 })
       .expect(400);
 

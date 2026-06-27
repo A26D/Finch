@@ -8,16 +8,25 @@
     "start": "node src/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "worker:dev": "node --watch src/worker.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.106.0",
+    "bcrypt": "^6.0.0",
+    "bullmq": "^5.79.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "ioredis": "^5.11.1",
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.22.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "ioredis-mock": "^8.13.1",
     "supertest": "^6.3.4",
     "vitest": "^1.6.1"
   }

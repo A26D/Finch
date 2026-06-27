@@ -48,6 +48,7 @@ describe("Budgets CRUD API", () => {
   it("GET /api/budgets/:id — returns single budget with progress", async () => {
     const res = await request(app)
       .get(`/api/budgets/${budgetId}`)
+      .query({ user_id: USER_ID })
       .expect(200);
 
     expect(res.body.id).toBe(budgetId);
@@ -58,6 +59,7 @@ describe("Budgets CRUD API", () => {
   it("PUT /api/budgets/:id — updates a budget", async () => {
     const res = await request(app)
       .put(`/api/budgets/${budgetId}`)
+      .query({ user_id: USER_ID })
       .send({ amount: 12000 })
       .expect(200);
 
@@ -67,6 +69,7 @@ describe("Budgets CRUD API", () => {
   it("DELETE /api/budgets/:id — soft-deletes a budget", async () => {
     const res = await request(app)
       .delete(`/api/budgets/${budgetId}`)
+      .query({ user_id: USER_ID })
       .expect(200);
 
     expect(res.body.message).toBe("Budget archived");
@@ -75,6 +78,7 @@ describe("Budgets CRUD API", () => {
   it("GET /api/budgets/:id — returns 404 for archived budget", async () => {
     await request(app)
       .get(`/api/budgets/${budgetId}`)
+      .query({ user_id: USER_ID })
       .expect(404);
   });
 

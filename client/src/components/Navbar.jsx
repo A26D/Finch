@@ -1,10 +1,14 @@
 import { Link, useLocation } from "react-router-dom";
+import NotificationBell from "./notifications/NotificationBell";
 
 const links = [
   { to: "/", label: "Dashboard" },
   { to: "/transactions", label: "Transactions" },
   { to: "/budgets", label: "Budgets" },
   { to: "/goals", label: "Goals" },
+  { to: "/recurring", label: "Recurring" },
+  { to: "/reports", label: "Reports" },
+  { to: "/settings", label: "Settings" },
 ];
 
 export default function Navbar() {
@@ -16,7 +20,7 @@ export default function Navbar() {
         <Link to="/" className="text-lg font-bold text-indigo-600">
           ExpenseTracker
         </Link>
-        <div className="flex gap-6">
+        <div className="flex items-center gap-6">
           {links.map((link) => (
             <Link
               key={link.to}
@@ -30,6 +34,7 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+          <NotificationBell />
         </div>
       </div>
     </nav>

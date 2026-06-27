@@ -1,5 +1,20 @@
 # Changelog
 
+## Version 0.6
+- Added recurring transactions & bills module
+- Added recurring_transactions database table (soft-delete, status lifecycle)
+- Added `recurrence.js` utility (pure functions: calculateNextRunDate, isTransactionDue, generateTransaction, generateAllDueTransactions)
+- Added recurring transaction service layer with Zod validation
+- Added recurring CRUD routes with pause/resume and run-due endpoints
+- Added `validation.js` middleware (Zod schema-based request validation)
+- Added shared frequency/interval/type validation schemas
+- Added UpcomingBills dashboard section (next 5 due recurring expenses)
+- Added Recurring Transactions page with route and nav integration
+- Added `recurringAnalytics.js` (6 pure functions for monthly recurring income/expense, upcoming bills, average spend, recurring ratio)
+- Added `useRecurringTransactions` hook with pause/resume support
+- Added full test coverage (recurrence unit tests, service layer tests, CRUD integration tests)
+- Left TODO comments for AI extension points (detection, subscriptions, notifications, forecasting, missed payments)
+
 ## Version 0.5
 - Added multi-category budgets with soft deletes
 - Added budget analytics and progress tracking

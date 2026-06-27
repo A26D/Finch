@@ -5,12 +5,9 @@ const router = Router();
 
 router.get("/", async (req, res) => {
   try {
-    const { user_id } = req.query;
-    if (!user_id) return res.status(400).json({ error: "user_id is required" });
-
     const { rows } = await pool.query(
       "SELECT * FROM accounts WHERE user_id = $1 ORDER BY name",
-      [user_id]
+      [req.user.id]
     );
     res.json(rows);
   } catch (err) {

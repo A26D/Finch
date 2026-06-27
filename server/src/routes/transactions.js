@@ -1,11 +1,11 @@
 import { Router } from "express";
 import pool from "../db.js";
 import { validate } from "../middleware/validate.js";
+import { enqueueDashboardRecompute } from "../jobs/jobQueue.js";
 
 const router = Router();
 
 const createSchema = {
-  user_id: { required: true, type: "uuid" },
   account_id: { required: true, type: "uuid" },
   category_id: { type: "uuid" },
   amount: { required: true, type: "number" },
@@ -27,7 +27,6 @@ const updateSchema = {
 router.get("/", async (req, res) => {
   try {
     const {
-      user_id,
       account_id,
       category_id,
       start_date,
@@ -36,12 +35,8 @@ router.get("/", async (req, res) => {
       limit = 20,
     } = req.query;
 
-    if (!user_id) {
-      return res.status(400).json({ error: "user_id is required" });
-    }
-
     const conditions = ["t.user_id = $1"];
-    const params = [user_id];
+    const params = [req.user.id];
     let idx = 2;
 
     if (account_id) {
@@ -106,8 +101,8 @@ router.get("/:id", async (req, res) => {
        FROM transactions t
        LEFT JOIN categories c ON c.id = t.category_id
        LEFT JOIN accounts a ON a.id = t.account_id
-       WHERE t.id = $1`,
-      [id]
+       WHERE t.id = $1 AND t.user_id = $2`,
+      [id, req.user.id]
     );
 
     if (!rows.length) {
@@ -129,17 +124,18 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Validation failed", details: errors });
     }
 
-    const { user_id, account_id, category_id, amount, date, description, payment_method } =
+    const { account_id, category_id, amount, date, description, payment_method } =
       req.body;
 
     const { rows } = await pool.query(
       `INSERT INTO transactions (user_id, account_id, category_id, amount, date, description, payment_method)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [user_id, account_id, category_id || null, amount, date, description || null, payment_method || null]
+      [req.user.id, account_id, category_id || null, amount, date, description || null, payment_method || null]
     );
 
     res.status(201).json(rows[0]);
+    enqueueDashboardRecompute(req.user.id, "transaction_created").catch(() => {});
   } catch (err) {
     console.error("POST /transactions error:", err);
     if (err.code === "23503") {
@@ -159,7 +155,7 @@ router.put("/:id", async (req, res) => {
       return res.status(400).json({ error: "Validation failed", details: errors });
     }
 
-    const existing = await pool.query("SELECT * FROM transactions WHERE id = $1", [id]);
+    const existing = await pool.query("SELECT * FROM transactions WHERE id = $1 AND user_id = $2", [id, req.user.id]);
     if (!existing.rows.length) {
       return res.status(404).json({ error: "Transaction not found" });
     }
@@ -187,6 +183,7 @@ router.put("/:id", async (req, res) => {
     );
 
     res.json(rows[0]);
+    enqueueDashboardRecompute(existing.rows[0].user_id, "transaction_updated").catch(() => {});
   } catch (err) {
     console.error("PUT /transactions/:id error:", err);
     if (err.code === "23503") {
@@ -202,8 +199,8 @@ router.delete("/:id", async (req, res) => {
     const { id } = req.params;
 
     const { rows } = await pool.query(
-      "DELETE FROM transactions WHERE id = $1 RETURNING *",
-      [id]
+      "DELETE FROM transactions WHERE id = $1 AND user_id = $2 RETURNING *",
+      [id, req.user.id]
     );
 
     if (!rows.length) {
@@ -211,6 +208,7 @@ router.delete("/:id", async (req, res) => {
     }
 
     res.json({ message: "Transaction deleted", transaction: rows[0] });
+    enqueueDashboardRecompute(rows[0].user_id, "transaction_deleted").catch(() => {});
   } catch (err) {
     console.error("DELETE /transactions/:id error:", err);
     res.status(500).json({ error: "Failed to delete transaction" });

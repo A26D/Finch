@@ -11,16 +11,14 @@ import {
   contributeSchema,
 } from "../services/goalService.js";
 import { ZodError } from "zod";
+import { enqueueDashboardRecompute } from "../jobs/jobQueue.js";
 
 const router = Router();
 
-// GET /api/goals?user_id=X — list active goals with progress
+// GET /api/goals — list active goals with progress
 router.get("/", async (req, res) => {
   try {
-    const { user_id } = req.query;
-    if (!user_id) return res.status(400).json({ error: "user_id is required" });
-
-    const goals = await getGoalsWithProgress(user_id, pool);
+    const goals = await getGoalsWithProgress(req.user.id, pool);
     res.json(goals);
   } catch (err) {
     console.error("GET /goals error:", err);
@@ -32,8 +30,8 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT * FROM goals WHERE id = $1 AND archived_at IS NULL`,
-      [req.params.id]
+      `SELECT * FROM goals WHERE id = $1 AND user_id = $2 AND archived_at IS NULL`,
+      [req.params.id, req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: "Goal not found" });
 
@@ -64,15 +62,18 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "Validation failed", details: [{ message: errMsg, path: ["current_saved_amount"] }] });
   }
 
+  const userId = req.user.id;
+
   try {
     const { rows } = await pool.query(
       `INSERT INTO goals (user_id, name, target_amount, current_saved_amount, target_date, priority, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [data.user_id, data.name, data.target_amount, data.current_saved_amount, data.target_date || null, data.priority, data.status]
+      [userId, data.name, data.target_amount, data.current_saved_amount, data.target_date || null, data.priority, data.status]
     );
 
     res.status(201).json(enrichGoalWithProgress(rows[0]));
+    enqueueDashboardRecompute(userId, "goal_created").catch(() => {});
   } catch (err) {
     console.error("POST /goals error:", err);
     if (err.code === "23503") {
@@ -88,8 +89,8 @@ router.put("/:id", async (req, res) => {
     const { id } = req.params;
 
     const { rows: existing } = await pool.query(
-      `SELECT * FROM goals WHERE id = $1 AND archived_at IS NULL`,
-      [id]
+      `SELECT * FROM goals WHERE id = $1 AND user_id = $2 AND archived_at IS NULL`,
+      [id, req.user.id]
     );
     if (!existing.length) return res.status(404).json({ error: "Goal not found" });
 
@@ -129,6 +130,7 @@ router.put("/:id", async (req, res) => {
     );
 
     res.json(enrichGoalWithProgress(updated[0]));
+    enqueueDashboardRecompute(existing[0].user_id, "goal_updated").catch(() => {});
   } catch (err) {
     if (err instanceof ZodError) {
       return res.status(400).json({ error: "Validation failed", details: err.issues });
@@ -145,14 +147,15 @@ router.delete("/:id", async (req, res) => {
 
     const { rows } = await pool.query(
       `UPDATE goals SET archived_at = NOW(), updated_at = NOW()
-       WHERE id = $1 AND archived_at IS NULL
+       WHERE id = $1 AND user_id = $2 AND archived_at IS NULL
        RETURNING *`,
-      [id]
+      [id, req.user.id]
     );
 
     if (!rows.length) return res.status(404).json({ error: "Goal not found" });
 
     res.json({ message: "Goal archived", goal: rows[0] });
+    enqueueDashboardRecompute(rows[0].user_id, "goal_deleted").catch(() => {});
   } catch (err) {
     console.error("DELETE /goals/:id error:", err);
     res.status(500).json({ error: "Failed to archive goal" });
@@ -177,6 +180,7 @@ router.post("/:id/contribute", async (req, res) => {
     if (!goal) return res.status(404).json({ error: "Goal not found or archived" });
 
     res.json(enrichGoalWithProgress(goal));
+    enqueueDashboardRecompute(goal.user_id, "goal_contributed").catch(() => {});
   } catch (err) {
     console.error("POST /goals/:id/contribute error:", err);
     res.status(500).json({ error: "Failed to contribute to goal" });

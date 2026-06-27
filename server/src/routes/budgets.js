@@ -8,16 +8,14 @@ import {
   updateBudgetSchema,
 } from "../services/budgetService.js";
 import { ZodError } from "zod";
+import { enqueueDashboardRecompute } from "../jobs/jobQueue.js";
 
 const router = Router();
 
-// GET /api/budgets?user_id=X — list active budgets with progress
+// GET /api/budgets — list active budgets with progress
 router.get("/", async (req, res) => {
   try {
-    const { user_id } = req.query;
-    if (!user_id) return res.status(400).json({ error: "user_id is required" });
-
-    const budgets = await getBudgetsWithProgress(user_id, pool);
+    const budgets = await getBudgetsWithProgress(req.user.id, pool);
     res.json(budgets);
   } catch (err) {
     console.error("GET /budgets error:", err);
@@ -29,8 +27,8 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT b.* FROM budgets b WHERE b.id = $1 AND b.archived_at IS NULL`,
-      [req.params.id]
+      `SELECT b.* FROM budgets b WHERE b.id = $1 AND b.user_id = $2 AND b.archived_at IS NULL`,
+      [req.params.id, req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: "Budget not found" });
 
@@ -63,7 +61,8 @@ router.post("/", async (req, res) => {
     throw err;
   }
 
-  const { user_id, name, type, amount, period, start_date, end_date, rollover_enabled, strictness, alert_threshold, category_ids } = data;
+  const { name, type, amount, period, start_date, end_date, rollover_enabled, strictness, alert_threshold, category_ids } = data;
+  const userId = req.user.id;
 
   try {
     // Validate categories
@@ -72,7 +71,7 @@ router.post("/", async (req, res) => {
     }
 
     if (category_ids && category_ids.length) {
-      const valid = await validateBudgetCategories(category_ids, user_id, pool);
+      const valid = await validateBudgetCategories(category_ids, userId, pool);
       if (!valid) {
         return res.status(400).json({ error: "One or more category IDs are invalid or don't belong to the user" });
       }
@@ -82,7 +81,7 @@ router.post("/", async (req, res) => {
       `INSERT INTO budgets (user_id, name, type, amount, period, start_date, end_date, rollover_enabled, strictness, alert_threshold)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [user_id, name, type, amount, period, start_date, end_date || null, rollover_enabled, strictness, alert_threshold]
+      [userId, name, type, amount, period, start_date, end_date || null, rollover_enabled, strictness, alert_threshold]
     );
 
     const budget = rows[0];
@@ -99,6 +98,7 @@ router.post("/", async (req, res) => {
 
     budget.categories = category_ids || [];
     res.status(201).json(budget);
+    enqueueDashboardRecompute(userId, "budget_created").catch(() => {});
   } catch (err) {
     console.error("POST /budgets error:", err);
     if (err.code === "23503") {
@@ -115,8 +115,8 @@ router.put("/:id", async (req, res) => {
 
     // Check exists
     const { rows: existing } = await pool.query(
-      `SELECT * FROM budgets WHERE id = $1 AND archived_at IS NULL`,
-      [id]
+      `SELECT * FROM budgets WHERE id = $1 AND user_id = $2 AND archived_at IS NULL`,
+      [id, req.user.id]
     );
     if (!existing.length) return res.status(404).json({ error: "Budget not found" });
 
@@ -169,6 +169,7 @@ router.put("/:id", async (req, res) => {
 
     const enriched = await enrichBudgetWithProgress(updated[0], pool);
     res.json(enriched);
+    enqueueDashboardRecompute(existing[0].user_id, "budget_updated").catch(() => {});
   } catch (err) {
     if (err instanceof ZodError) {
       return res.status(400).json({ error: "Validation failed", details: err.issues });
@@ -188,14 +189,15 @@ router.delete("/:id", async (req, res) => {
 
     const { rows } = await pool.query(
       `UPDATE budgets SET archived_at = NOW(), updated_at = NOW()
-       WHERE id = $1 AND archived_at IS NULL
+       WHERE id = $1 AND user_id = $2 AND archived_at IS NULL
        RETURNING *`,
-      [id]
+      [id, req.user.id]
     );
 
     if (!rows.length) return res.status(404).json({ error: "Budget not found" });
 
     res.json({ message: "Budget archived", budget: rows[0] });
+    enqueueDashboardRecompute(rows[0].user_id, "budget_deleted").catch(() => {});
   } catch (err) {
     console.error("DELETE /budgets/:id error:", err);
     res.status(500).json({ error: "Failed to archive budget" });
