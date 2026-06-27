@@ -61,7 +61,7 @@ JWT authentication with refresh token rotation and HttpOnly cookies. All API rou
 | Database | PostgreSQL |
 | Cache | Redis |
 | Job Queue | BullMQ |
-| AI | Anthropic API (Claude), tool-calling |
+| AI | Mock AI |
 | Validation | Zod |
 | Testing | Vitest, Supertest |
 | Mobile *(in progress)* | Flutter |
