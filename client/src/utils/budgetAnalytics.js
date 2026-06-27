@@ -1,9 +1,10 @@
+import { calculatePercentage, daysRemaining as sharedDaysRemaining } from "./dateMath";
+
 /**
  * Calculate percentage of budget used.
  */
 export function calculateBudgetProgress(spent, amount) {
-  if (amount <= 0) return 0;
-  return Math.round((spent / amount) * 10000) / 100;
+  return calculatePercentage(spent, amount);
 }
 
 /**
@@ -29,9 +30,7 @@ export function calculateProjectedOverspend(spent, amount, daysElapsed, daysTota
  * Number of days remaining in the period.
  */
 export function calculateDaysRemaining(periodEnd, today = new Date()) {
-  const end = new Date(periodEnd);
-  const diff = end - today;
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  return sharedDaysRemaining(periodEnd, today);
 }
 
 /**

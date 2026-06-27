@@ -58,7 +58,7 @@ router.post("/", async (req, res) => {
     data = createBudgetSchema.parse(req.body);
   } catch (err) {
     if (err instanceof ZodError) {
-      return res.status(400).json({ error: "Validation failed", details: err.errors });
+      return res.status(400).json({ error: "Validation failed", details: err.issues });
     }
     throw err;
   }
@@ -171,7 +171,7 @@ router.put("/:id", async (req, res) => {
     res.json(enriched);
   } catch (err) {
     if (err instanceof ZodError) {
-      return res.status(400).json({ error: "Validation failed", details: err.errors });
+      return res.status(400).json({ error: "Validation failed", details: err.issues });
     }
     console.error("PUT /budgets/:id error:", err);
     if (err.code === "23503") {

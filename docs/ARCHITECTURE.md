@@ -74,23 +74,38 @@ expense-tracker/
 │       ├── App.jsx
 │       └── main.jsx
 ├── server/
+│   ├── src/
+│   │   ├── migrations/
+│   │   │   ├── 001_create_tables.sql
+│   │   │   └── 002_create_budgets.sql
+│   │   ├── middleware/
+│   │   │   └── validate.js
+│   │   ├── routes/
+│   │   │   ├── accounts.js
+│   │   │   ├── budgets.js
+│   │   │   ├── categories.js
+│   │   │   └── transactions.js
+│   │   ├── services/
+│   │   │   └── budgetService.js
+│   │   ├── app.js                # Express app (exported for tests)
+│   │   ├── db.js
+│   │   └── index.js              # Server entry (imports app.js)
+│   ├── tests/
+│   │   ├── budgetService.test.js
+│   │   └── integration/
+│   │       └── budgets.test.js
+│   └── vitest.config.js
+├── client/
 │   └── src/
-│       ├── migrations/
-│       │   ├── 001_create_tables.sql
-│       │   └── 002_create_budgets.sql
-│       ├── middleware/
-│       │   └── validate.js
-│       ├── routes/
-│       │   ├── accounts.js
-│       │   ├── budgets.js
-│       │   ├── categories.js
-│       │   └── transactions.js
-│       ├── services/
-│       │   └── budgetService.js
-│       ├── db.js
-│       └── index.js
+│       ├── utils/
+│       │   └── __tests__/
+│       │       ├── analytics.test.js
+│       │       ├── budgetAnalytics.test.js
+│       │       └── filterTransactions.test.js
+│       └── ...
 ├── docs/
 │   └── ARCHITECTURE.md
+├── CHANGELOG.md
 └── package.json
 ```
 
@@ -179,3 +194,79 @@ node src/index.js
 cd client
 npm run dev
 ```
+
+---
+
+## Testing Strategy
+
+### Framework
+
+| Layer | Tool | Environment |
+|-------|------|-------------|
+| Client (JS/React) | Vitest + React Testing Library | jsdom |
+| Server (Node/Express) | Vitest + Supertest | node |
+
+Vitest is chosen for both layers to keep a consistent API (`describe`/`it`/`expect`/`vi`) across the project.
+
+### Test Structure
+
+```
+server/
+  tests/
+    budgetService.test.js        # Unit tests for service layer
+    integration/
+      budgets.test.js            # Integration tests for budgets API
+client/
+  src/
+    utils/
+      __tests__/
+        analytics.test.js        # Unit tests for analytics utils
+        budgetAnalytics.test.js  # Unit tests for budget analytics utils
+        filterTransactions.test.js # Unit tests for filter/sort utils
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run client tests only
+npm run test:client
+
+# Run server tests only
+npm run test:server
+
+# Watch mode
+npm run test:watch
+
+# With coverage
+npm run test:coverage
+```
+
+### What Each Layer Covers
+
+**Client — Pure utility tests (Vitest + jsdom)**
+- `analytics.js`: 12 pure functions for financial calculations (income, expenses, trends, etc.)
+- `budgetAnalytics.js`: 6 pure functions for budget calculations (progress, overspend, status, etc.)
+- `filterTransactions.js`: Pure filter/sort function with composable predicates
+- Future: React component tests with RTL (hooks with `renderHook`, components with `screen`)
+
+**Server — Service layer tests (Vitest + Supertest)**
+- `budgetService.js`: Pure functions (period window, amount calculation) tested directly; pool-dependent functions tested with `vi.fn()` mock pool
+- Zod schema validation tested inline (create and update schemas)
+- Integration: Budgets CRUD via Supertest against the real Express app and database (no DB mocking for integration tests)
+
+### Naming Conventions
+
+- Pure function files: `[name].test.js` or `__tests__/[name].test.js`
+- Service layer: `tests/[serviceName].test.js`
+- Integration: `tests/integration/[feature].test.js`
+- React components: co-located `[Component].test.jsx`
+
+### Mocking Strategy
+
+- **Pool (pg)**: `vi.fn()` on `pool.query` returning `{ rows: [...] }` — no real DB connection needed for unit tests
+- **Date**: Fixed dates passed explicitly to pure functions (no global date mocks)
+- **Network**: Supertest handles HTTP without a running server (imports Express app directly)
+- **Future React components**: `vi.mock()` for services/hooks at module level

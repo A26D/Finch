@@ -4,6 +4,7 @@ const links = [
   { to: "/", label: "Dashboard" },
   { to: "/transactions", label: "Transactions" },
   { to: "/budgets", label: "Budgets" },
+  { to: "/goals", label: "Goals" },
 ];
 
 export default function Navbar() {

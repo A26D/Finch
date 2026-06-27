@@ -5,9 +5,11 @@ import ExpensePieChart from "../components/charts/ExpensePieChart";
 import MonthlyBarChart from "../components/charts/MonthlyBarChart";
 import IncomeExpenseLineChart from "../components/charts/IncomeExpenseLineChart";
 import BudgetSummary from "../components/budgets/BudgetSummary";
+import GoalSummary from "../components/goals/GoalSummary";
 import useDashboardData from "../hooks/useDashboardData";
 import useAnalytics from "../hooks/useAnalytics";
 import useBudgets from "../hooks/useBudgets";
+import useGoals from "../hooks/useGoals";
 import { COLORS } from "../utils/chartData";
 
 const trendIcon = (direction) => {
@@ -33,7 +35,12 @@ export default function Dashboard() {
     loading: budgetsLoading,
   } = useBudgets();
 
-  if (loading || budgetsLoading) {
+  const {
+    goals,
+    loading: goalsLoading,
+  } = useGoals();
+
+  if (loading || budgetsLoading || goalsLoading) {
     return <div className="text-center py-10 text-gray-500">Loading…</div>;
   }
 
@@ -51,6 +58,8 @@ export default function Dashboard() {
       <IncomeExpenseLineChart data={incomeExpenseData} />
 
       <BudgetSummary budgets={budgets} />
+
+      <GoalSummary goals={goals} />
 
       <div>
         <h2 className="text-lg font-semibold text-gray-800 mb-3">Financial Analytics</h2>
