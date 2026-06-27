@@ -163,22 +163,8 @@ npm test
 
 ---
 
-## 📱 Roadmap
 
-- [ ] Docker Compose for one-command local setup
-- [ ] CI/CD pipeline (GitHub Actions)
-- [ ] Cloud deployment
-- [ ] Flutter mobile application
-- [ ] Push notifications (FCM)
-- [ ] Offline mode
 
----
-
-## 📸 Screenshots
-
-*Coming soon — once the web UI and Flutter app are finalized.*
-
----
 
 ## 👩‍💻 Author
 
