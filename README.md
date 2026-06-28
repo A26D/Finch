@@ -170,6 +170,7 @@ npm test
 
 **Aditi**
 GitHub: [@A26D](https://github.com/A26D)
+netlify: https://a26dfinch.netlify.app/
 
 ---
 
